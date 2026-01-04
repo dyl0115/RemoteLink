@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'"
+    />
+    <title>RemoteLink</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="container">
+      <!-- 사이드바: 서버 목록 -->
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <h1>🔗 RemoteLink</h1>
+          <button id="btn-add-server" class="btn-add">+ 서버 추가</button>
+        </div>
+        <ul id="server-list" class="server-list">
+          <!-- 서버 목록이 여기에 렌더링 -->
+        </ul>
+      </aside>
+
+      <!-- 메인 영역 -->
+      <main class="main-content">
+        <!-- 환영 메시지 (서버 미선택 시) -->
+        <div id="welcome-section" class="welcome-message">
+          <h2>👋 환영합니다!</h2>
+          <p>왼쪽에서 서버를 선택하거나 새 서버를 추가하세요.</p>
+        </div>
+
+        <!-- 서버 상세 (선택 시) -->
+        <div id="server-detail" class="server-detail hidden">
+          <div class="detail-header">
+            <h2 id="detail-name">서버 이름</h2>
+            <div class="detail-actions">
+              <button id="btn-edit-server" class="btn-secondary">수정</button>
+              <button id="btn-delete-server" class="btn-danger">삭제</button>
+            </div>
+          </div>
+          <div class="detail-info">
+            <p><strong>Host:</strong> <span id="detail-host">-</span></p>
+            <p><strong>Port:</strong> <span id="detail-port">-</span></p>
+            <p>
+              <strong>Username:</strong> <span id="detail-username">-</span>
+            </p>
+            <p><strong>Key File:</strong> <span id="detail-keyfile">-</span></p>
+          </div>
+
+          <!-- 연결 테스트 섹션 -->
+          <div class="connection-section">
+            <button id="btn-test-connection" class="btn-primary">
+              🪢 연결 테스트
+            </button>
+            <span id="connection-status" class="connection-status"></span>
+          </div>
+
+          <hr />
+
+          <div class="file-transfer-section">
+            <h3>📁 파일 전송</h3>
+
+            <!-- 원격 경로 입력 -->
+            <div class="remote-path-input">
+              <label for="remote-path">원격 경로:</label>
+              <input
+                type="text"
+                id="remote-path"
+                placeholder="/home/ubuntu/app"
+              />
+            </div>
+
+            <!-- 드래그앤드롭 영역 -->
+            <div id="drop-zone" class="drop-zone">
+              <p>📂 파일 또는 폴더를 여기에 드래그하세요</p>
+              <p class="drop-zone-sub">또는</p>
+              <div class="file-buttons">
+                <button id="btn-select-file" class="btn-secondary">
+                  파일 선택
+                </button>
+                <button id="btn-select-folder" class="btn-secondary">
+                  폴더 선택
+                </button>
+              </div>
+            </div>
+
+            <!-- 전송 대기 목록 -->
+            <div id="transfer-queue" class="transfer-queue hidden">
+              <h4>전송 대기 목록</h4>
+              <ul id="queue-list"></ul>
+              <div class="queue-actions">
+                <button id="btn-clear-queue" class="btn-secondary">
+                  목록 비우기
+                </button>
+                <button id="btn-start-transfer" class="btn-primary">
+                  🚀 전송 시작
+                </button>
+              </div>
+            </div>
+
+            <!-- 전송 상태 -->
+            <div id="transfer-status" class="transfer-status hidden">
+              <div class="progress-info">
+                <span id="transfer-filename">파일명</span>
+                <span id="transfer-percent">0%</span>
+              </div>
+              <div class="progress-bar">
+                <div id="progress-fill" class="progress-fill"></div>
+              </div>
+              <p id="transfer-result" class="transfer-result"></p>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- 서버 추가/수정 모달 -->
+    <div id="server-modal" class="modal hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 id="modal-title">서버 추가</h2>
+          <button id="btn-close-modal" class="btn-close">&times;</button>
+        </div>
+        <form id="server-form">
+          <input type="hidden" id="form-id" />
+
+          <div class="form-group">
+            <label for="form-name">서버 이름</label>
+            <input
+              type="text"
+              id="form-name"
+              placeholder="예: OCI 운영서버"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="form-host">Host (IP)</label>
+            <input
+              type="text"
+              id="form-host"
+              placeholder="예: 123.456.789.0"
+              required
+            />
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="form-port">Port</label>
+              <input type="number" id="form-port" value="22" required />
+            </div>
+            <div class="form-group">
+              <label for="form-username">Username</label>
+              <input
+                type="text"
+                id="form-username"
+                placeholder="예: ubuntu"
+                required
+              />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="form-keyfile">SSH Key 파일</label>
+            <div class="file-input-group">
+              <input
+                type="text"
+                id="form-keyfile"
+                placeholder="키 파일 경로"
+                readonly
+              />
+              <button
+                type="button"
+                id="btn-select-keyfile"
+                class="btn-secondary"
+              >
+                찾기
+              </button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="form-remote-path">기본 원격 경로 (선택)</label>
+            <input
+              type="text"
+              id="form-remote-path"
+              placeholder="예: /home/ubuntu/app"
+            />
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" id="btn-cancel" class="btn-secondary">
+              취소
+            </button>
+            <button type="submit" class="btn-primary">저장</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <script src="renderer/index.js" type="module"></script>
+  </body>
+</html>

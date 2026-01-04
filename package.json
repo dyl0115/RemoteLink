@@ -1,0 +1,18 @@
+{
+  "name": "remote-link",
+  "version": "1.0.0",
+  "description": "원격 서버 관리 및 파일 전송 도구",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^33.0.0"
+  },
+  "dependencies": {
+    "ssh2": "^1.16.0"
+  }
+}
