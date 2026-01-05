@@ -4,6 +4,7 @@
 
 import { state, loadServers } from "./index.js";
 import { showDetail, hideDetail } from "./serverDetailView.js";
+import { onServerSelected } from "./fileTransferView.js";
 
 const serverListEl = document.getElementById("server-list");
 
@@ -44,6 +45,7 @@ function selectServer(id) {
   state.selectedServerId = id;
   renderServerList();
   showDetail();
+  onServerSelected(); // 파일 전송 뷰에 알림 (원격 경로 로드)
 }
 
 // 선택 해제

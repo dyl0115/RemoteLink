@@ -7,6 +7,10 @@ contextBridge.exposeInMainWorld("api", {
     findById: (id) => ipcRenderer.invoke("server:findById", id),
     save: (server) => ipcRenderer.invoke("server:save", server),
     delete: (id) => ipcRenderer.invoke("server:delete", id),
+    saveRemotePath: (serverId, remotePath) =>
+      ipcRenderer.invoke("server:saveRemotePath", serverId, remotePath),
+    deleteRemotePath: (serverId, remotePath) =>
+      ipcRenderer.invoke("server:deleteRemotePath", serverId, remotePath),
   },
 
   // 다이얼로그
@@ -24,14 +28,15 @@ contextBridge.exposeInMainWorld("api", {
       ipcRenderer.invoke("ssh:sendFile", serverId, localPath, remotePath),
   },
 
-  // SSH 도커 연결 관련
+  // Docker 관련
   docker: {
     listContainer: (serverId) =>
       ipcRenderer.invoke("docker:listContainer", serverId),
-
-    copyToContainer: (serverId, localPath, containerName, containerPath) =>
+    testContainer: (serverId, containerName) =>
+      ipcRenderer.invoke("docker:testContainer", serverId, containerName),
+    sendFile: (serverId, localPath, containerName, containerPath) =>
       ipcRenderer.invoke(
-        "docker:copyToContainer",
+        "docker:sendFile",
         serverId,
         localPath,
         containerName,

@@ -59,6 +59,7 @@ class ServerRepository {
         // 추가
         server.id = this._generateId();
         server.createdAt = new Date().toISOString();
+        server.remotePaths = server.remotePaths || []; // 원격 경로 배열 초기화
         servers.push(server);
       }
 
@@ -86,6 +87,78 @@ class ServerRepository {
       return {
         success: false,
         error: "서버 삭제에 실패했습니다",
+        code: ERROR_CODES.FILE_WRITE_ERROR,
+      };
+    }
+  }
+
+  // 원격 경로 추가
+  addRemotePath(serverId, remotePath) {
+    try {
+      const servers = this.findAll();
+      const index = servers.findIndex((s) => s.id === serverId);
+
+      if (index === -1) {
+        return {
+          success: false,
+          error: "서버를 찾을 수 없습니다",
+          code: ERROR_CODES.NOT_FOUND,
+        };
+      }
+
+      // remotePaths 배열이 없으면 생성
+      if (!servers[index].remotePaths) {
+        servers[index].remotePaths = [];
+      }
+
+      // 중복 체크
+      if (servers[index].remotePaths.includes(remotePath)) {
+        return { success: true, data: servers[index].remotePaths };
+      }
+
+      servers[index].remotePaths.push(remotePath);
+      this._writeFile(servers);
+
+      return { success: true, data: servers[index].remotePaths };
+    } catch (err) {
+      console.error("[ServerRepository] addRemotePath 실패:", err);
+      return {
+        success: false,
+        error: "원격 경로 저장에 실패했습니다",
+        code: ERROR_CODES.FILE_WRITE_ERROR,
+      };
+    }
+  }
+
+  // 원격 경로 삭제
+  removeRemotePath(serverId, remotePath) {
+    try {
+      const servers = this.findAll();
+      const index = servers.findIndex((s) => s.id === serverId);
+
+      if (index === -1) {
+        return {
+          success: false,
+          error: "서버를 찾을 수 없습니다",
+          code: ERROR_CODES.NOT_FOUND,
+        };
+      }
+
+      if (!servers[index].remotePaths) {
+        return { success: true, data: [] };
+      }
+
+      servers[index].remotePaths = servers[index].remotePaths.filter(
+        (p) => p !== remotePath
+      );
+      this._writeFile(servers);
+
+      return { success: true, data: servers[index].remotePaths };
+    } catch (err) {
+      console.error("[ServerRepository] removeRemotePath 실패:", err);
+      return {
+        success: false,
+        error: "원격 경로 삭제에 실패했습니다",
         code: ERROR_CODES.FILE_WRITE_ERROR,
       };
     }

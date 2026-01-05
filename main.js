@@ -54,6 +54,19 @@ ipcMain.handle("server:delete", async (event, id) => {
   return serverRepository.delete(id);
 });
 
+// 원격 경로 저장
+ipcMain.handle("server:saveRemotePath", async (event, serverId, remotePath) => {
+  return serverRepository.addRemotePath(serverId, remotePath);
+});
+
+// 원격 경로 삭제
+ipcMain.handle(
+  "server:deleteRemotePath",
+  async (event, serverId, remotePath) => {
+    return serverRepository.removeRemotePath(serverId, remotePath);
+  }
+);
+
 // 키 파일 선택 다이얼로그
 ipcMain.handle("dialog:selectKeyFile", async () => {
   const result = await dialog.showOpenDialog(mainWindow, {
@@ -141,9 +154,27 @@ ipcMain.handle("docker:listContainer", async (event, serverId) => {
   return dockerClient.getContainers(server);
 });
 
+// 도커 컨테이너 연결 테스트
+ipcMain.handle(
+  "docker:testContainer",
+  async (event, serverId, containerName) => {
+    const server = serverRepository.findById(serverId);
+
+    if (!server) {
+      return {
+        success: false,
+        error: "서버를 찾을 수 없습니다",
+        code: ERROR_CODES.NOT_FOUND,
+      };
+    }
+
+    return dockerClient.testContainer(server, containerName);
+  }
+);
+
 // 호스트의 도커 컨테이너에 파일 전송
 ipcMain.handle(
-  "docker:copyToContainer",
+  "docker:sendFile",
   async (event, serverId, localPath, containerName, containerPath) => {
     const server = serverRepository.findById(serverId);
 
@@ -155,7 +186,18 @@ ipcMain.handle(
       };
     }
 
-    return dockerClient.copyToContainer(
+    console.log(
+      "main.js -> docker:sendFile:  serverId=" +
+        serverId +
+        " localPath=" +
+        localPath +
+        " containerName=" +
+        containerName +
+        " containerPath=" +
+        containerPath
+    );
+
+    return dockerClient.sendFile(
       server,
       localPath,
       containerName,

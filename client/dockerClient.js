@@ -45,6 +45,41 @@ async function getContainers(server) {
 }
 
 /**
+ * Docker 컨테이너 연결 테스트
+ * @param {Object} server - 서버 정보
+ * @param {string} containerName - 컨테이너 이름
+ * @returns {Promise<{success: boolean, running?: boolean, error?: string, code?: string}>}
+ */
+async function testContainer(server, containerName) {
+  return withConnection(server, async (conn) => {
+    // 컨테이너 실행 상태 확인
+    const command = `docker inspect ${containerName} --format '{{.State.Running}}'`;
+    const result = await execCommand(conn, command);
+
+    if (!result.success) {
+      return {
+        success: false,
+        error: `컨테이너를 찾을 수 없습니다: ${containerName}`,
+        code: ERROR_CODES.CONTAINER_NOT_FOUND,
+      };
+    }
+
+    const isRunning = result.stdout.trim() === "true";
+
+    if (!isRunning) {
+      return {
+        success: false,
+        running: false,
+        error: `컨테이너가 실행 중이 아닙니다: ${containerName}`,
+        code: ERROR_CODES.CONTAINER_NOT_FOUND,
+      };
+    }
+
+    return { success: true, running: true };
+  });
+}
+
+/**
  * 로컬 → 호스트 → 컨테이너로 파일 복사
  * @param {Object} server - 서버 정보
  * @param {string} localPath - 로컬 파일 경로
@@ -52,12 +87,7 @@ async function getContainers(server) {
  * @param {string} containerPath - 컨테이너 내 경로
  * @returns {Promise<{success: boolean, error?: string, code?: string}>}
  */
-async function copyToContainer(
-  server,
-  localPath,
-  containerName,
-  containerPath
-) {
+async function sendFile(server, localPath, containerName, containerPath) {
   return withConnection(server, async (conn) => {
     const fileName = path.basename(localPath);
     const tempPath = `/tmp/${fileName}`;
@@ -107,5 +137,6 @@ async function copyToContainer(
 
 module.exports = {
   getContainers,
-  copyToContainer,
+  testContainer,
+  sendFile,
 };

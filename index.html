@@ -32,6 +32,7 @@
 
         <!-- 서버 상세 (선택 시) -->
         <div id="server-detail" class="server-detail hidden">
+          <!-- 서버 정보 헤더 -->
           <div class="detail-header">
             <h2 id="detail-name">서버 이름</h2>
             <div class="detail-actions">
@@ -42,46 +43,54 @@
           <div class="detail-info">
             <p><strong>Host:</strong> <span id="detail-host">-</span></p>
             <p><strong>Port:</strong> <span id="detail-port">-</span></p>
-            <p>
-              <strong>Username:</strong> <span id="detail-username">-</span>
-            </p>
+            <p><strong>Username:</strong> <span id="detail-username">-</span></p>
             <p><strong>Key File:</strong> <span id="detail-keyfile">-</span></p>
           </div>
 
-          <!-- 연결 테스트 섹션 -->
+          <!-- 연결 대상 선택 & 테스트 -->
           <div class="connection-section">
-            <button id="btn-test-connection" class="btn-primary">
-              🪢 연결 테스트
-            </button>
-            <span id="connection-status" class="connection-status"></span>
+            <div class="connection-target">
+              <label for="connection-target">연결 대상:</label>
+              <select id="connection-target">
+                <option value="host">🖥️ 호스트</option>
+                <!-- 컨테이너 목록은 JS로 동적 추가 -->
+              </select>
+              <button id="btn-refresh-containers" class="btn-icon" title="컨테이너 목록 새로고침">
+                🔄
+              </button>
+              <button id="btn-test-connection" class="btn-primary">
+                🪢 연결 테스트
+              </button>
+            </div>
+            <div id="connection-status" class="connection-status"></div>
           </div>
 
           <hr />
 
+          <!-- 파일 전송 섹션 -->
           <div class="file-transfer-section">
             <h3>📁 파일 전송</h3>
 
-            <!-- 전송 대상 선택 -->
-            <div class="transfer-target">
-              <label for="transfer-target">전송 대상:</label>
-              <select id="transfer-target">
-                <option value="host">호스트 직접</option>
-                <!-- 컨테이너 목록은 JS로 동적 추가 -->
-              </select>
-              <button id="btn-refresh-containers" class="btn-secondary">
-                🔄
-              </button>
-              <span id="container-status" class="container-status"></span>
-            </div>
-
             <!-- 원격 경로 입력 -->
-            <div class="remote-path-input">
+            <div class="remote-path-section">
               <label for="remote-path">원격 경로:</label>
-              <input
-                type="text"
-                id="remote-path"
-                placeholder="/home/ubuntu/app"
-              />
+              <div class="remote-path-input-group">
+                <input
+                  type="text"
+                  id="remote-path"
+                  list="remote-path-list"
+                  placeholder="/home/ubuntu/app"
+                />
+                <datalist id="remote-path-list">
+                  <!-- 저장된 경로 목록은 JS로 동적 추가 -->
+                </datalist>
+                <button id="btn-save-path" class="btn-icon" title="현재 경로 저장">
+                  💾
+                </button>
+                <button id="btn-manage-paths" class="btn-icon" title="저장된 경로 관리">
+                  ⚙️
+                </button>
+              </div>
             </div>
 
             <!-- 드래그앤드롭 영역 -->
@@ -209,6 +218,24 @@
             <button type="submit" class="btn-primary">저장</button>
           </div>
         </form>
+      </div>
+    </div>
+
+    <!-- 원격 경로 관리 모달 -->
+    <div id="paths-modal" class="modal hidden">
+      <div class="modal-content modal-small">
+        <div class="modal-header">
+          <h2>저장된 원격 경로</h2>
+          <button id="btn-close-paths-modal" class="btn-close">&times;</button>
+        </div>
+        <div class="paths-list-container">
+          <ul id="saved-paths-list" class="saved-paths-list">
+            <!-- 저장된 경로 목록은 JS로 동적 추가 -->
+          </ul>
+          <p id="no-paths-message" class="no-paths-message hidden">
+            저장된 경로가 없습니다.
+          </p>
+        </div>
       </div>
     </div>
 
