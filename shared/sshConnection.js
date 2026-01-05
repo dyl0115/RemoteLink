@@ -5,6 +5,7 @@
 const { Client } = require("ssh2");
 const fs = require("fs");
 const { ERROR_CODES, ERROR_MESSAGES } = require("./errorCodes");
+const logger = require("./logger");
 
 const CONNECTION_TIMEOUT_MS = 10000;
 
@@ -33,30 +34,16 @@ function buildConfig(server) {
  * @param {Object} server - 서버 정보 { host, port, username, keyFile? }
  * @param {Function} onReady - 연결 성공 시 콜백 (conn) => Promise<Result>
  * @returns {Promise<{success: boolean, error?: string, code?: string}>}
- *
- * @example
- * // 단순 연결 테스트
- * const result = await withConnection(server, () => ({ success: true }));
- *
- * @example
- * // SFTP 파일 전송
- * const result = await withConnection(server, (conn) => {
- *   return new Promise((resolve) => {
- *     conn.sftp((err, sftp) => {
- *       if (err) return resolve({ success: false, error: err.message });
- *       sftp.fastPut(local, remote, (err) => {
- *         if (err) return resolve({ success: false, error: err.message });
- *         resolve({ success: true });
- *       });
- *     });
- *   });
- * });
  */
 async function withConnection(server, onReady) {
   return new Promise((resolve) => {
     const conn = new Client();
+    const serverInfo = `${server.username}@${server.host}:${server.port}`;
+
+    logger.debug("SSHConnection", `연결 시도: ${serverInfo}`);
 
     const timeout = setTimeout(() => {
+      logger.warn("SSHConnection", `연결 타임아웃: ${serverInfo}`);
       conn.end();
       resolve({
         success: false,
@@ -67,11 +54,14 @@ async function withConnection(server, onReady) {
 
     conn.on("ready", async () => {
       clearTimeout(timeout);
+      logger.debug("SSHConnection", `연결 성공: ${serverInfo}`);
+
       try {
         const result = await onReady(conn);
         conn.end();
         resolve(result);
       } catch (err) {
+        logger.error("SSHConnection", `작업 중 에러: ${serverInfo}`, { error: err.message });
         conn.end();
         resolve({
           success: false,
@@ -83,6 +73,7 @@ async function withConnection(server, onReady) {
 
     conn.on("error", (err) => {
       clearTimeout(timeout);
+      logger.error("SSHConnection", `연결 에러: ${serverInfo}`, { error: err.message });
       conn.end();
       resolve({
         success: false,
@@ -95,6 +86,7 @@ async function withConnection(server, onReady) {
       conn.connect(buildConfig(server));
     } catch (err) {
       clearTimeout(timeout);
+      logger.error("SSHConnection", `연결 설정 에러: ${serverInfo}`, { error: err.message });
       resolve({
         success: false,
         error: err.message,
@@ -112,8 +104,11 @@ async function withConnection(server, onReady) {
  */
 function getSftp(conn) {
   return new Promise((resolve) => {
+    logger.debug("SSHConnection", "SFTP 세션 생성 시도");
+
     conn.sftp((err, sftp) => {
       if (err) {
+        logger.error("SSHConnection", "SFTP 세션 생성 실패", { error: err.message });
         resolve({
           success: false,
           error: err.message,
@@ -121,6 +116,8 @@ function getSftp(conn) {
         });
         return;
       }
+
+      logger.debug("SSHConnection", "SFTP 세션 생성 성공");
       resolve({ success: true, sftp });
     });
   });
@@ -135,8 +132,11 @@ function getSftp(conn) {
  */
 function execCommand(conn, command) {
   return new Promise((resolve) => {
+    logger.debug("SSHConnection", `명령어 실행: ${command}`);
+
     conn.exec(command, (err, stream) => {
       if (err) {
+        logger.error("SSHConnection", "명령어 실행 실패", { command, error: err.message });
         resolve({
           success: false,
           error: err.message,
@@ -158,8 +158,10 @@ function execCommand(conn, command) {
 
       stream.on("close", (exitCode) => {
         if (exitCode === 0) {
+          logger.debug("SSHConnection", `명령어 성공: ${command}`, { exitCode });
           resolve({ success: true, stdout, stderr, exitCode });
         } else {
+          logger.warn("SSHConnection", `명령어 실패: ${command}`, { exitCode, stderr });
           resolve({
             success: false,
             error: stderr || `Exit code: ${exitCode}`,

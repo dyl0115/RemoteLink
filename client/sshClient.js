@@ -2,7 +2,11 @@
 // client/sshClient.js - SSH 클라이언트
 // ========================================
 
-const { withConnection, getSftp } = require("../shared/sshConnection");
+const {
+  withConnection,
+  getSftp,
+  execCommand,
+} = require("../shared/sshConnection");
 const { ERROR_CODES } = require("../shared/errorCodes");
 
 /**
@@ -12,6 +16,28 @@ const { ERROR_CODES } = require("../shared/errorCodes");
  */
 async function testConnection(server) {
   return withConnection(server, () => {
+    return { success: true };
+  });
+}
+
+/**
+ * 원격 디렉토리 생성 (mkdir -p)
+ * @param {Object} server - 서버 정보
+ * @param {string} remoteDirPath - 원격 디렉토리 경로
+ * @returns {Promise<{success: boolean, error?: string, code?: string}>}
+ */
+async function makeDirectory(server, remoteDirPath) {
+  return withConnection(server, async (conn) => {
+    const result = await execCommand(conn, `mkdir -p "${remoteDirPath}"`);
+
+    if (!result.success) {
+      return {
+        success: false,
+        error: result.error,
+        code: ERROR_CODES.FILE_WRITE_ERROR,
+      };
+    }
+
     return { success: true };
   });
 }
@@ -48,5 +74,6 @@ async function sendFile(server, localPath, remotePath) {
 
 module.exports = {
   testConnection,
+  makeDirectory,
   sendFile,
 };

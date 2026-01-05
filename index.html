@@ -43,7 +43,9 @@
           <div class="detail-info">
             <p><strong>Host:</strong> <span id="detail-host">-</span></p>
             <p><strong>Port:</strong> <span id="detail-port">-</span></p>
-            <p><strong>Username:</strong> <span id="detail-username">-</span></p>
+            <p>
+              <strong>Username:</strong> <span id="detail-username">-</span>
+            </p>
             <p><strong>Key File:</strong> <span id="detail-keyfile">-</span></p>
           </div>
 
@@ -55,8 +57,12 @@
                 <option value="host">🖥️ 호스트</option>
                 <!-- 컨테이너 목록은 JS로 동적 추가 -->
               </select>
-              <button id="btn-refresh-containers" class="btn-icon" title="컨테이너 목록 새로고침">
-                🔄
+              <button
+                id="btn-refresh-containers"
+                class="btn-icon"
+                title="컨테이너 목록 새로고침"
+              >
+                🔄컨테이너 불러오기
               </button>
               <button id="btn-test-connection" class="btn-primary">
                 🪢 연결 테스트
@@ -73,7 +79,11 @@
 
             <!-- 원격 경로 입력 -->
             <div class="remote-path-section">
-              <label for="remote-path">원격 경로:</label>
+              <label for="remote-path"
+                >원격 경로 <br />
+                1. 원격 서버에 존재하는 폴더 경로여야 합니다.<br />
+                2. Username의 사용자가 해당 폴더 수정 권한이 있어야 합니다.
+              </label>
               <div class="remote-path-input-group">
                 <input
                   type="text"
@@ -84,10 +94,18 @@
                 <datalist id="remote-path-list">
                   <!-- 저장된 경로 목록은 JS로 동적 추가 -->
                 </datalist>
-                <button id="btn-save-path" class="btn-icon" title="현재 경로 저장">
+                <button
+                  id="btn-save-path"
+                  class="btn-icon"
+                  title="현재 경로 저장"
+                >
                   💾
                 </button>
-                <button id="btn-manage-paths" class="btn-icon" title="저장된 경로 관리">
+                <button
+                  id="btn-manage-paths"
+                  class="btn-icon"
+                  title="저장된 경로 관리"
+                >
                   ⚙️
                 </button>
               </div>

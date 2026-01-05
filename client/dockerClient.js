@@ -80,6 +80,30 @@ async function testContainer(server, containerName) {
 }
 
 /**
+ * 컨테이너 내 디렉토리 생성 (docker exec mkdir -p)
+ * @param {Object} server - 서버 정보
+ * @param {string} containerName - 컨테이너 이름
+ * @param {string} dirPath - 컨테이너 내 디렉토리 경로
+ * @returns {Promise<{success: boolean, error?: string, code?: string}>}
+ */
+async function makeDirectoryInContainer(server, containerName, dirPath) {
+  return withConnection(server, async (conn) => {
+    const command = `docker exec ${containerName} mkdir -p "${dirPath}"`;
+    const result = await execCommand(conn, command);
+
+    if (!result.success) {
+      return {
+        success: false,
+        error: result.error,
+        code: ERROR_CODES.DOCKER_COMMAND_FAILED,
+      };
+    }
+
+    return { success: true };
+  });
+}
+
+/**
  * 로컬 → 호스트 → 컨테이너로 파일 복사
  * @param {Object} server - 서버 정보
  * @param {string} localPath - 로컬 파일 경로
@@ -138,5 +162,6 @@ async function sendFile(server, localPath, containerName, containerPath) {
 module.exports = {
   getContainers,
   testContainer,
+  makeDirectoryInContainer,
   sendFile,
 };

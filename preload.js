@@ -20,10 +20,18 @@ contextBridge.exposeInMainWorld("api", {
     selectFolder: () => ipcRenderer.invoke("dialog:selectFolder"),
   },
 
+  // 파일 유틸리티
+  file: {
+    getFolderContents: (folderPath) =>
+      ipcRenderer.invoke("file:getFolderContents", folderPath),
+  },
+
   // SSH 연결 관련
   ssh: {
     testConnection: (serverId) =>
       ipcRenderer.invoke("ssh:testConnection", serverId),
+    makeDirectory: (serverId, remoteDirPath) =>
+      ipcRenderer.invoke("ssh:makeDirectory", serverId, remoteDirPath),
     sendFile: (serverId, localPath, remotePath) =>
       ipcRenderer.invoke("ssh:sendFile", serverId, localPath, remotePath),
   },
@@ -34,6 +42,8 @@ contextBridge.exposeInMainWorld("api", {
       ipcRenderer.invoke("docker:listContainer", serverId),
     testContainer: (serverId, containerName) =>
       ipcRenderer.invoke("docker:testContainer", serverId, containerName),
+    makeDirectory: (serverId, containerName, dirPath) =>
+      ipcRenderer.invoke("docker:makeDirectory", serverId, containerName, dirPath),
     sendFile: (serverId, localPath, containerName, containerPath) =>
       ipcRenderer.invoke(
         "docker:sendFile",
@@ -42,5 +52,12 @@ contextBridge.exposeInMainWorld("api", {
         containerName,
         containerPath
       ),
+  },
+
+  // 경로 유틸리티 (크로스 플랫폼) - Main 프로세스에서 처리
+  path: {
+    basename: (filePath) => ipcRenderer.invoke("path:basename", filePath),
+    dirname: (filePath) => ipcRenderer.invoke("path:dirname", filePath),
+    join: (...paths) => ipcRenderer.invoke("path:join", ...paths),
   },
 });

@@ -30,11 +30,21 @@ const savedPathsList = document.getElementById("saved-paths-list");
 const noPathsMessage = document.getElementById("no-paths-message");
 
 // 전송 대기 목록
+// { absolutePath, relativePath, displayName, isFolder }
 let fileQueue = [];
 
 // ========================================
 // 헬퍼 함수들
 // ========================================
+
+/**
+ * 경로에서 파일명 추출 (크로스 플랫폼, 비동기)
+ * @param {string} filePath
+ * @returns {Promise<string>}
+ */
+async function getFileName(filePath) {
+  return await window.api.path.basename(filePath);
+}
 
 /**
  * 전송 결과 업데이트
@@ -232,24 +242,30 @@ export function initFileTransfer() {
   });
 
   // 드롭
-  dropZone.addEventListener("drop", (e) => {
+  dropZone.addEventListener("drop", async (e) => {
     e.preventDefault();
     dropZone.classList.remove("drag-over");
 
     const files = [...e.dataTransfer.files];
-    files.forEach((file) => {
-      addToQueue(file.path, file.name);
-    });
+    for (const file of files) {
+      // 폴더인지 확인하고 처리
+      await addItemToQueue(file.path);
+    }
   });
 
   // 파일 선택 버튼 (다중 선택 가능)
   btnSelectFile.addEventListener("click", async () => {
     const filePaths = await window.api.dialog.selectFile();
     if (filePaths && filePaths.length > 0) {
-      filePaths.forEach((filePath) => {
-        const fileName = filePath.split("\\").pop();
-        addToQueue(filePath, fileName);
-      });
+      for (const filePath of filePaths) {
+        const fileName = await getFileName(filePath);
+        addToQueue({
+          absolutePath: filePath,
+          relativePath: fileName,
+          displayName: fileName,
+          isFolder: false,
+        });
+      }
     }
   });
 
@@ -257,8 +273,7 @@ export function initFileTransfer() {
   btnSelectFolder.addEventListener("click", async () => {
     const folderPath = await window.api.dialog.selectFolder();
     if (folderPath) {
-      const folderName = folderPath.split("\\").pop();
-      addToQueue(folderPath, folderName, true);
+      await addItemToQueue(folderPath);
     }
   });
 
@@ -294,8 +309,49 @@ export function initFileTransfer() {
 // 대기 목록 관리
 // ========================================
 
-function addToQueue(path, name, isFolder = false) {
-  fileQueue.push({ path, name, isFolder });
+/**
+ * 파일 또는 폴더를 큐에 추가
+ * @param {string} itemPath - 파일 또는 폴더 경로
+ */
+async function addItemToQueue(itemPath) {
+  // 폴더인지 확인
+  const result = await window.api.file.getFolderContents(itemPath);
+
+  if (result.success) {
+    // 폴더인 경우: 내부 파일들을 모두 추가
+    const folderName = result.folderName;
+
+    if (result.files.length === 0) {
+      alert(`폴더 "${folderName}"에 파일이 없습니다.`);
+      return;
+    }
+
+    for (const file of result.files) {
+      addToQueue({
+        absolutePath: file.absolutePath,
+        relativePath: `${folderName}/${file.posixRelativePath}`,
+        displayName: `${folderName}/${file.posixRelativePath}`,
+        isFolder: false,
+      });
+    }
+  } else {
+    // 파일인 경우
+    const fileName = await getFileName(itemPath);
+    addToQueue({
+      absolutePath: itemPath,
+      relativePath: fileName,
+      displayName: fileName,
+      isFolder: false,
+    });
+  }
+}
+
+/**
+ * 큐에 항목 추가
+ * @param {{absolutePath: string, relativePath: string, displayName: string, isFolder: boolean}} item
+ */
+function addToQueue(item) {
+  fileQueue.push(item);
   renderQueue();
 }
 
@@ -316,7 +372,7 @@ function renderQueue() {
   fileQueue.forEach((item, index) => {
     const li = document.createElement("li");
     li.innerHTML = `
-      <span>${item.isFolder ? "📁" : "📄"} ${item.name}</span>
+      <span>📄 ${item.displayName}</span>
       <button class="btn-remove" data-index="${index}">&times;</button>
     `;
     queueList.appendChild(li);
@@ -335,6 +391,31 @@ function renderQueue() {
 // ========================================
 // 파일 전송 (통합)
 // ========================================
+
+/**
+ * 필요한 디렉토리 목록 추출 (중복 제거)
+ * @param {string} remoteBasePath
+ * @returns {string[]}
+ */
+function extractDirectories(remoteBasePath) {
+  const dirs = new Set();
+
+  for (const item of fileQueue) {
+    // relativePath에서 디렉토리 부분 추출
+    const parts = item.relativePath.split("/");
+    if (parts.length > 1) {
+      // 파일명 제외한 경로
+      let currentPath = remoteBasePath;
+      for (let i = 0; i < parts.length - 1; i++) {
+        currentPath = `${currentPath}/${parts[i]}`;
+        dirs.add(currentPath);
+      }
+    }
+  }
+
+  // 정렬 (상위 디렉토리부터 생성하도록)
+  return Array.from(dirs).sort();
+}
 
 /**
  * 파일 전송 실행
@@ -359,22 +440,41 @@ async function startTransfer(targetType, containerName = null) {
   // UI 초기화
   showTransferProgress();
 
+  // 1단계: 필요한 디렉토리 생성
+  const dirsToCreate = extractDirectories(remoteBasePath);
+
+  for (const dir of dirsToCreate) {
+    updateProgress(`📁 ${dir} 생성 중...`, 0, fileQueue.length);
+
+    const mkdirResult =
+      targetType === "host"
+        ? await window.api.ssh.makeDirectory(server.id, dir)
+        : await window.api.docker.makeDirectory(server.id, containerName, dir);
+
+    if (!mkdirResult.success) {
+      console.error(`디렉토리 생성 실패: ${dir} - ${mkdirResult.error}`);
+      // 계속 진행 (이미 존재할 수 있음)
+    }
+  }
+
+  // 2단계: 파일 전송
   let successCount = 0;
   let failCount = 0;
 
   for (let i = 0; i < fileQueue.length; i++) {
     const item = fileQueue[i];
-    const remoteFilePath = `${remoteBasePath}/${item.name}`;
+    // 원격 경로는 항상 POSIX 스타일 (/)
+    const remoteFilePath = `${remoteBasePath}/${item.relativePath}`;
 
-    updateProgress(item.name, i, fileQueue.length);
+    updateProgress(item.displayName, i, fileQueue.length);
 
     // 전송 대상에 따라 API 분기
     const result =
       targetType === "host"
-        ? await window.api.ssh.sendFile(server.id, item.path, remoteFilePath)
+        ? await window.api.ssh.sendFile(server.id, item.absolutePath, remoteFilePath)
         : await window.api.docker.sendFile(
             server.id,
-            item.path,
+            item.absolutePath,
             containerName,
             remoteFilePath
           );
@@ -384,7 +484,7 @@ async function startTransfer(targetType, containerName = null) {
     } else {
       failCount++;
       console.error(
-        `[${result.code}] 전송 실패: ${item.name} - ${result.error}`
+        `[${result.code}] 전송 실패: ${item.displayName} - ${result.error}`
       );
     }
   }
