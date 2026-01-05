@@ -1,0 +1,40 @@
+// ========================================
+// shared/errorCodes.js - 에러 코드 상수
+// ========================================
+
+const ERROR_CODES = {
+  // 연결 관련
+  CONNECTION_TIMEOUT: "CONNECTION_TIMEOUT",
+  CONNECTION_REFUSED: "CONNECTION_REFUSED",
+  SSH_AUTH_FAILED: "SSH_AUTH_FAILED",
+
+  // 파일 관련
+  FILE_NOT_FOUND: "FILE_NOT_FOUND",
+  FILE_READ_ERROR: "FILE_READ_ERROR",
+  FILE_WRITE_ERROR: "FILE_WRITE_ERROR",
+
+  // Docker 관련
+  DOCKER_NOT_RUNNING: "DOCKER_NOT_RUNNING",
+  CONTAINER_NOT_FOUND: "CONTAINER_NOT_FOUND",
+  DOCKER_COMMAND_FAILED: "DOCKER_COMMAND_FAILED",
+
+  // 일반
+  UNKNOWN_ERROR: "UNKNOWN_ERROR",
+  NOT_FOUND: "NOT_FOUND",
+  VALIDATION_ERROR: "VALIDATION_ERROR",
+};
+
+const ERROR_MESSAGES = {
+  [ERROR_CODES.CONNECTION_TIMEOUT]: "연결 시간이 초과되었습니다 (10초)",
+  [ERROR_CODES.CONNECTION_REFUSED]: "서버에 연결할 수 없습니다",
+  [ERROR_CODES.SSH_AUTH_FAILED]: "SSH 인증에 실패했습니다",
+  [ERROR_CODES.FILE_NOT_FOUND]: "파일을 찾을 수 없습니다",
+  [ERROR_CODES.DOCKER_NOT_RUNNING]: "Docker가 실행되지 않고 있습니다",
+  [ERROR_CODES.CONTAINER_NOT_FOUND]: "컨테이너를 찾을 수 없습니다",
+  [ERROR_CODES.NOT_FOUND]: "리소스를 찾을 수 없습니다",
+};
+
+module.exports = {
+  ERROR_CODES,
+  ERROR_MESSAGES,
+};

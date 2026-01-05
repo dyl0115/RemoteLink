@@ -2,6 +2,8 @@ const { app, BrowserWindow, ipcMain, dialog } = require("electron");
 const path = require("path");
 const serverRepository = require("./repository/serverRepository");
 const sshClient = require("./client/sshClient");
+const dockerClient = require("./client/dockerClient");
+const { ERROR_CODES } = require("./shared/errorCodes");
 
 let mainWindow;
 
@@ -94,14 +96,70 @@ ipcMain.handle("dialog:selectFolder", async () => {
 // SSH 커넥션 테스트
 ipcMain.handle("ssh:testConnection", async (event, serverId) => {
   const server = serverRepository.findById(serverId);
+
+  if (!server) {
+    return {
+      success: false,
+      error: "서버를 찾을 수 없습니다",
+      code: ERROR_CODES.NOT_FOUND,
+    };
+  }
+
   return sshClient.testConnection(server);
 });
 
-// 파일 전송 (검토 하기)
+// 호스트에게 파일 전송
 ipcMain.handle(
   "ssh:sendFile",
   async (event, serverId, localPath, remotePath) => {
     const server = serverRepository.findById(serverId);
+
+    if (!server) {
+      return {
+        success: false,
+        error: "서버를 찾을 수 없습니다",
+        code: ERROR_CODES.NOT_FOUND,
+      };
+    }
+
     return sshClient.sendFile(server, localPath, remotePath);
+  }
+);
+
+// 호스트의 도커 컨테이너 조회
+ipcMain.handle("docker:listContainer", async (event, serverId) => {
+  const server = serverRepository.findById(serverId);
+
+  if (!server) {
+    return {
+      success: false,
+      error: "서버를 찾을 수 없습니다",
+      code: ERROR_CODES.NOT_FOUND,
+    };
+  }
+
+  return dockerClient.getContainers(server);
+});
+
+// 호스트의 도커 컨테이너에 파일 전송
+ipcMain.handle(
+  "docker:copyToContainer",
+  async (event, serverId, localPath, containerName, containerPath) => {
+    const server = serverRepository.findById(serverId);
+
+    if (!server) {
+      return {
+        success: false,
+        error: "서버를 찾을 수 없습니다",
+        code: ERROR_CODES.NOT_FOUND,
+      };
+    }
+
+    return dockerClient.copyToContainer(
+      server,
+      localPath,
+      containerName,
+      containerPath
+    );
   }
 );

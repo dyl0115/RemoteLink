@@ -61,6 +61,19 @@
           <div class="file-transfer-section">
             <h3>📁 파일 전송</h3>
 
+            <!-- 전송 대상 선택 -->
+            <div class="transfer-target">
+              <label for="transfer-target">전송 대상:</label>
+              <select id="transfer-target">
+                <option value="host">호스트 직접</option>
+                <!-- 컨테이너 목록은 JS로 동적 추가 -->
+              </select>
+              <button id="btn-refresh-containers" class="btn-secondary">
+                🔄
+              </button>
+              <span id="container-status" class="container-status"></span>
+            </div>
+
             <!-- 원격 경로 입력 -->
             <div class="remote-path-input">
               <label for="remote-path">원격 경로:</label>

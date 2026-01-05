@@ -19,6 +19,16 @@ const btnDeleteServer = document.getElementById("btn-delete-server");
 const btnTestConnection = document.getElementById("btn-test-connection");
 const connectionStatus = document.getElementById("connection-status");
 
+/**
+ * 상태 업데이트 헬퍼 함수
+ * @param {'loading' | 'success' | 'error'} type
+ * @param {string} message
+ */
+function updateConnectionStatus(type, message) {
+  connectionStatus.textContent = message;
+  connectionStatus.className = `connection-status ${type}`;
+}
+
 export function initServerDetail() {
   // 수정 버튼
   btnEditServer.addEventListener("click", () => {
@@ -36,12 +46,14 @@ export function initServerDetail() {
     const confirmed = confirm(`"${server.name}" 서버를 삭제하시겠습니까?`);
     if (!confirmed) return;
 
-    try {
-      await window.api.server.delete(server.id);
+    const result = await window.api.server.delete(server.id);
+
+    if (result.success) {
       deselectServer();
       await refreshServerList();
-    } catch (err) {
-      alert("삭제 실패: " + err.message);
+    } else {
+      alert("삭제 실패: " + result.error);
+      console.error(`[${result.code}]`, result.error);
     }
   });
 
@@ -50,17 +62,15 @@ export function initServerDetail() {
     const server = getSelectedServer();
     if (!server) return;
 
-    connectionStatus.textContent = "연결 중...";
-    connectionStatus.className = "connection-status loading";
+    updateConnectionStatus("loading", "연결 중...");
 
     const result = await window.api.ssh.testConnection(server.id);
 
     if (result.success) {
-      connectionStatus.textContent = "✅ 연결 성공!";
-      connectionStatus.className = "connection-status success";
+      updateConnectionStatus("success", "✅ 연결 성공!");
     } else {
-      connectionStatus.textContent = "❌ 연결 실패: " + error;
-      connectionStatus.className = "connection-status error";
+      updateConnectionStatus("error", `❌ 연결 실패: ${result.error}`);
+      console.error(`[${result.code}]`, result.error);
     }
   });
 }
@@ -75,6 +85,10 @@ export function showDetail() {
   detailPort.textContent = server.port;
   detailUsername.textContent = server.username;
   detailKeyfile.textContent = server.keyFile || "(없음)";
+
+  // 연결 상태 초기화
+  connectionStatus.textContent = "";
+  connectionStatus.className = "connection-status";
 
   welcomeSection.classList.add("hidden");
   detailSection.classList.remove("hidden");

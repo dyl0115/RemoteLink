@@ -18,9 +18,32 @@ const transferFilename = document.getElementById("transfer-filename");
 const transferPercent = document.getElementById("transfer-percent");
 const progressFill = document.getElementById("progress-fill");
 const transferResult = document.getElementById("transfer-result");
+const transferTarget = document.getElementById("transfer-target");
+const btnRefreshContainers = document.getElementById("btn-refresh-containers");
+const containerStatus = document.getElementById("container-status");
 
 // 전송 대기 목록
 let fileQueue = [];
+
+/**
+ * 컨테이너 상태 업데이트 헬퍼 함수
+ * @param {'loading' | 'success' | 'error'} type
+ * @param {string} message
+ */
+function updateContainerStatus(type, message) {
+  containerStatus.textContent = message;
+  containerStatus.className = `container-status ${type}`;
+}
+
+/**
+ * 전송 결과 업데이트 헬퍼 함수
+ * @param {'success' | 'error'} type
+ * @param {string} message
+ */
+function updateTransferResult(type, message) {
+  transferResult.textContent = message;
+  transferResult.className = `transfer-result ${type}`;
+}
 
 export function initFileTransfer() {
   // 드래그 오버
@@ -71,9 +94,45 @@ export function initFileTransfer() {
     clearQueue();
   });
 
+  // 도커 컨테이너 목록 새로고침
+  btnRefreshContainers.addEventListener("click", async () => {
+    const server = getSelectedServer();
+    if (!server) return;
+
+    transferTarget.innerHTML = '<option value="host">호스트 직접</option>';
+    updateContainerStatus("loading", "조회 중...");
+
+    const result = await window.api.docker.listContainer(server.id);
+
+    if (!result.success) {
+      updateContainerStatus("error", `❌ ${result.error}`);
+      console.error(`[${result.code}]`, result.error);
+      return;
+    }
+
+    result.containers.forEach((container) => {
+      const option = document.createElement("option");
+      option.value = container.name;
+      option.textContent = `🐳 ${container.name} (${container.image})`;
+      transferTarget.appendChild(option);
+    });
+
+    updateContainerStatus(
+      "success",
+      `✅ ${result.containers.length}개 컨테이너`
+    );
+  });
+
   // 전송 시작
   btnStartTransfer.addEventListener("click", async () => {
-    await startTransfer();
+    const server = getSelectedServer();
+    const target = transferTarget.value;
+
+    if (target === "host") {
+      await startTransferToHost();
+    } else {
+      await startTransferToContainer(target);
+    }
   });
 }
 
@@ -118,8 +177,8 @@ function renderQueue() {
   });
 }
 
-// 전송 시작
-async function startTransfer() {
+// 호스트에게 전송 시작
+async function startTransferToHost() {
   const server = getSelectedServer();
   if (!server) {
     alert("서버를 선택해주세요.");
@@ -153,22 +212,19 @@ async function startTransfer() {
     transferPercent.textContent = `${percent}%`;
     progressFill.style.width = `${percent}%`;
 
-    try {
-      const result = await window.api.ssh.sendFile(
-        server.id,
-        item.path,
-        remoteFilePath
-      );
+    const result = await window.api.ssh.sendFile(
+      server.id,
+      item.path,
+      remoteFilePath
+    );
 
-      if (result.success) {
-        successCount++;
-      } else {
-        failCount++;
-        console.error(`전송 실패: ${item.name} - ${result.error}`);
-      }
-    } catch (err) {
+    if (result.success) {
+      successCount++;
+    } else {
       failCount++;
-      console.error(`전송 에러: ${item.name} - ${err.message}`);
+      console.error(
+        `[${result.code}] 전송 실패: ${item.name} - ${result.error}`
+      );
     }
   }
 
@@ -178,11 +234,85 @@ async function startTransfer() {
   transferFilename.textContent = "완료";
 
   if (failCount === 0) {
-    transferResult.textContent = `✅ ${successCount}개 파일 전송 성공!`;
-    transferResult.className = "transfer-result success";
+    updateTransferResult("success", `✅ ${successCount}개 파일 전송 성공!`);
   } else {
-    transferResult.textContent = `⚠️ 성공: ${successCount}, 실패: ${failCount}`;
-    transferResult.className = "transfer-result error";
+    updateTransferResult(
+      "error",
+      `⚠️ 성공: ${successCount}, 실패: ${failCount}`
+    );
+  }
+
+  btnStartTransfer.disabled = false;
+  clearQueue();
+}
+
+// 도커 컨테이너로 전송시작
+async function startTransferToContainer(containerName) {
+  const server = getSelectedServer();
+  if (!server) {
+    alert("서버를 선택해주세요.");
+    return;
+  }
+
+  const remoteBasePath =
+    remotePath.value.trim() || server.remotePath || "/home";
+
+  if (fileQueue.length === 0) {
+    alert("전송할 파일을 선택해주세요.");
+    return;
+  }
+
+  // 전송 상태 UI 표시
+  transferStatus.classList.remove("hidden");
+  transferResult.textContent = "";
+  transferResult.className = "transfer-result";
+  btnStartTransfer.disabled = true;
+
+  let successCount = 0;
+  let failCount = 0;
+
+  for (let i = 0; i < fileQueue.length; i++) {
+    const item = fileQueue[i];
+    const remoteFilePath = `${remoteBasePath}/${item.name}`;
+
+    // 진행률 표시
+    transferFilename.textContent = item.name;
+    const percent = Math.round((i / fileQueue.length) * 100);
+    transferPercent.textContent = `${percent}%`;
+    progressFill.style.width = `${percent}%`;
+
+    const result = await window.api.docker.copyToContainer(
+      server.id,
+      item.path,
+      containerName,
+      remoteFilePath
+    );
+
+    if (result.success) {
+      successCount++;
+    } else {
+      failCount++;
+      console.error(
+        `[${result.code}] 전송 실패: ${item.name} - ${result.error}`
+      );
+    }
+  }
+
+  // 완료
+  transferPercent.textContent = "100%";
+  progressFill.style.width = "100%";
+  transferFilename.textContent = "완료";
+
+  if (failCount === 0) {
+    updateTransferResult(
+      "success",
+      `✅ ${successCount}개 파일 컨테이너로 전송 성공!`
+    );
+  } else {
+    updateTransferResult(
+      "error",
+      `⚠️ 성공: ${successCount}, 실패: ${failCount}`
+    );
   }
 
   btnStartTransfer.disabled = false;

@@ -92,11 +92,13 @@ async function handleSubmit(e) {
     remotePath: formRemotePath.value.trim() || null,
   };
 
-  try {
-    await window.api.server.save(serverData);
+  const result = await window.api.server.save(serverData);
+
+  if (result.success) {
     closeModal();
     await refreshServerList();
-  } catch (err) {
-    alert("저장 실패: " + err.message);
+  } else {
+    alert("저장 실패: " + result.error);
+    console.error(`[${result.code}]`, result.error);
   }
 }

@@ -23,4 +23,19 @@ contextBridge.exposeInMainWorld("api", {
     sendFile: (serverId, localPath, remotePath) =>
       ipcRenderer.invoke("ssh:sendFile", serverId, localPath, remotePath),
   },
+
+  // SSH 도커 연결 관련
+  docker: {
+    listContainer: (serverId) =>
+      ipcRenderer.invoke("docker:listContainer", serverId),
+
+    copyToContainer: (serverId, localPath, containerName, containerPath) =>
+      ipcRenderer.invoke(
+        "docker:copyToContainer",
+        serverId,
+        localPath,
+        containerName,
+        containerPath
+      ),
+  },
 });

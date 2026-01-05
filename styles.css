@@ -495,3 +495,39 @@ hr {
 .hidden {
   display: none !important;
 }
+
+.transfer-target {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.transfer-target select {
+  flex: 1;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.transfer-target button {
+  padding: 8px 12px;
+}
+
+/* 컨테이너 상태 */
+.container-status {
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.container-status.loading {
+  color: #ffc107;
+}
+
+.container-status.success {
+  color: #4ade80;
+}
+
+.container-status.error {
+  color: #f87171;
+}
