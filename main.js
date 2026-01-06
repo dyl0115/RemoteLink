@@ -3,6 +3,7 @@ const path = require("path");
 const serverRepository = require("./repository/serverRepository");
 const sshClient = require("./client/sshClient");
 const dockerClient = require("./client/dockerClient");
+const terminalSession = require("./shared/terminalSession");
 const { ERROR_CODES } = require("./shared/errorCodes");
 const logger = require("./shared/logger");
 const fileUtils = require("./shared/fileUtils");
@@ -37,6 +38,10 @@ app.whenReady().then(() => {
 
 app.on("window-all-closed", () => {
   logger.info("App", "모든 윈도우 닫힘");
+  
+  // 모든 터미널 세션 종료
+  terminalSession.closeAll();
+  
   logger.close();
 
   if (process.platform !== "darwin") {
@@ -323,3 +328,83 @@ ipcMain.handle(
     return result;
   }
 );
+
+// ========================================
+// 터미널 IPC 핸들러
+// ========================================
+
+// 터미널 세션 열기
+ipcMain.on("terminal:open", async (event, { serverId, type, containerName }) => {
+  const server = serverRepository.findById(serverId);
+
+  if (!server) {
+    logger.warn("Terminal", "서버를 찾을 수 없음", { serverId });
+    event.reply("terminal:opened", {
+      success: false,
+      error: "서버를 찾을 수 없습니다",
+      code: ERROR_CODES.NOT_FOUND,
+    });
+    return;
+  }
+
+  const targetName = type === "host" ? "호스트" : containerName;
+  logger.info("Terminal", `터미널 세션 열기: ${targetName}`, { serverId, type });
+
+  // 데이터 수신 콜백
+  const onData = (data) => {
+    event.reply("terminal:data", { sessionId: result.sessionId, data });
+  };
+
+  // 세션 종료 콜백
+  const onClose = (reason) => {
+    event.reply("terminal:closed", { sessionId: result.sessionId, reason });
+  };
+
+  let result;
+  if (type === "host") {
+    result = await terminalSession.createHostSession(server, onData, onClose);
+  } else {
+    result = await terminalSession.createContainerSession(server, containerName, onData, onClose);
+  }
+
+  if (result.success) {
+    logger.info("Terminal", `터미널 세션 생성 완료`, { sessionId: result.sessionId });
+  } else {
+    logger.error("Terminal", `터미널 세션 생성 실패`, { error: result.error });
+  }
+
+  event.reply("terminal:opened", result);
+});
+
+// 터미널 데이터 쓰기 (키 입력)
+ipcMain.on("terminal:write", (event, { sessionId, data }) => {
+  const result = terminalSession.write(sessionId, data);
+  
+  if (!result.success) {
+    logger.warn("Terminal", `데이터 쓰기 실패`, { sessionId, error: result.error });
+  }
+});
+
+// 터미널 크기 변경
+ipcMain.on("terminal:resize", (event, { sessionId, cols, rows }) => {
+  const result = terminalSession.resize(sessionId, cols, rows);
+  
+  if (!result.success) {
+    logger.warn("Terminal", `크기 변경 실패`, { sessionId, error: result.error });
+  }
+});
+
+// 터미널 세션 닫기
+ipcMain.on("terminal:close", (event, { sessionId }) => {
+  logger.info("Terminal", `터미널 세션 닫기 요청`, { sessionId });
+  const result = terminalSession.close(sessionId);
+  
+  if (!result.success) {
+    logger.warn("Terminal", `세션 닫기 실패`, { sessionId, error: result.error });
+  }
+});
+
+// 활성 터미널 세션 목록 조회
+ipcMain.handle("terminal:list", () => {
+  return terminalSession.listSessions();
+});

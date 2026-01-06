@@ -586,6 +586,212 @@ hr {
   padding: 20px;
 }
 
+/* ========== 메인 탭 ========== */
+.main-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #0f3460;
+}
+
+.main-tab {
+  padding: 12px 24px;
+  background: transparent;
+  color: #888;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: all 0.2s;
+}
+
+.main-tab:hover {
+  color: #fff;
+}
+
+.main-tab.active {
+  color: #e94560;
+  border-bottom-color: #e94560;
+}
+
+/* ========== 터미널 섹션 ========== */
+.terminal-section {
+  margin-top: 0;
+}
+
+.terminal-container {
+  background: #1a1a2e;
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+}
+
+/* 터미널 탭 바 */
+.terminal-tabs {
+  display: flex;
+  align-items: center;
+  background: #0f3460;
+  padding: 0 10px;
+  min-height: 40px;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.terminal-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #1a1a2e;
+  border-radius: 6px 6px 0 0;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: #888;
+  transition: all 0.2s;
+  margin-top: 5px;
+}
+
+.terminal-tab:hover {
+  background: #16213e;
+  color: #fff;
+}
+
+.terminal-tab.active {
+  background: #1a1a2e;
+  color: #fff;
+  margin-bottom: -1px;
+  padding-bottom: 9px;
+}
+
+.terminal-tab .tab-icon {
+  font-size: 1rem;
+}
+
+.terminal-tab .tab-name {
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.terminal-tab .tab-close {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 0 2px;
+  line-height: 1;
+}
+
+.terminal-tab .tab-close:hover {
+  color: #e94560;
+}
+
+.btn-new-terminal {
+  padding: 6px 12px;
+  background: #16213e;
+  color: #888;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+}
+
+.btn-new-terminal:hover {
+  background: #e94560;
+  color: #fff;
+}
+
+/* 드롭다운 메뉴 */
+.new-terminal-dropdown {
+  position: absolute;
+  top: 45px;
+  left: 10px;
+  background: #16213e;
+  border: 1px solid #0f3460;
+  border-radius: 6px;
+  min-width: 180px;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.dropdown-item {
+  padding: 10px 15px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: #ccc;
+  transition: background 0.2s;
+}
+
+.dropdown-item:first-child {
+  border-radius: 6px 6px 0 0;
+}
+
+.dropdown-item:last-child {
+  border-radius: 0 0 6px 6px;
+}
+
+.dropdown-item:hover {
+  background: #0f3460;
+  color: #fff;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: #0f3460;
+  margin: 5px 0;
+}
+
+/* 터미널 내용 영역 */
+.terminal-content {
+  height: 300px;
+  background: #1a1a2e;
+  position: relative;
+  overflow: hidden;
+}
+
+.terminal-instance {
+  width: 100%;
+  height: 100%;
+  display: none;
+}
+
+.terminal-instance.active {
+  display: block;
+}
+
+.terminal-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #666;
+}
+
+/* 리사이즈 핸들 */
+.terminal-resize-handle {
+  height: 6px;
+  background: #0f3460;
+  cursor: ns-resize;
+  transition: background 0.2s;
+}
+
+.terminal-resize-handle:hover {
+  background: #e94560;
+}
+
+/* xterm 스타일 오버라이드 */
+.xterm {
+  padding: 10px;
+}
+
+.xterm-viewport {
+  overflow-y: auto !important;
+}
+
 /* ========== 유틸 ========== */
 .hidden {
   display: none !important;

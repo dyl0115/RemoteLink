@@ -4,10 +4,14 @@
     <meta charset="UTF-8" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'"
     />
     <title>RemoteLink</title>
+    <link rel="stylesheet" href="./node_modules/xterm/css/xterm.css" />
     <link rel="stylesheet" href="styles.css" />
+    <!-- xterm 라이브러리 -->
+    <script src="./node_modules/xterm/lib/xterm.js"></script>
+    <script src="./node_modules/xterm-addon-fit/lib/xterm-addon-fit.js"></script>
   </head>
   <body>
     <div class="container">
@@ -73,8 +77,14 @@
 
           <hr />
 
+          <!-- 메인 탭 -->
+          <div class="main-tabs">
+            <button id="tab-file-transfer" class="main-tab active">📁 파일 전송</button>
+            <button id="tab-terminal" class="main-tab">💻 터미널</button>
+          </div>
+
           <!-- 파일 전송 섹션 -->
-          <div class="file-transfer-section">
+          <div id="file-transfer-section" class="file-transfer-section">
             <h3>📁 파일 전송</h3>
 
             <!-- 원격 경로 입력 -->
@@ -149,6 +159,28 @@
                 <div id="progress-fill" class="progress-fill"></div>
               </div>
               <p id="transfer-result" class="transfer-result"></p>
+            </div>
+          </div>
+
+          <!-- 터미널 섹션 -->
+          <div id="terminal-section" class="terminal-section hidden">
+            <div id="terminal-container" class="terminal-container">
+              <!-- 터미널 탭 -->
+              <div id="terminal-tabs" class="terminal-tabs">
+                <button id="btn-new-terminal" class="btn-new-terminal">+ ▼</button>
+              </div>
+              <!-- 드롭다운 메뉴 -->
+              <div id="new-terminal-dropdown" class="new-terminal-dropdown hidden">
+                <!-- JS로 동적 추가 -->
+              </div>
+              <!-- 터미널 내용 -->
+              <div id="terminal-content" class="terminal-content">
+                <div class="terminal-placeholder">
+                  <p>💻 새 터미널을 열려면 [+] 버튼을 클릭하세요</p>
+                </div>
+              </div>
+              <!-- 리사이즈 핸들 -->
+              <div id="terminal-resize-handle" class="terminal-resize-handle"></div>
             </div>
           </div>
         </div>

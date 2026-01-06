@@ -43,7 +43,12 @@ contextBridge.exposeInMainWorld("api", {
     testContainer: (serverId, containerName) =>
       ipcRenderer.invoke("docker:testContainer", serverId, containerName),
     makeDirectory: (serverId, containerName, dirPath) =>
-      ipcRenderer.invoke("docker:makeDirectory", serverId, containerName, dirPath),
+      ipcRenderer.invoke(
+        "docker:makeDirectory",
+        serverId,
+        containerName,
+        dirPath
+      ),
     sendFile: (serverId, localPath, containerName, containerPath) =>
       ipcRenderer.invoke(
         "docker:sendFile",
@@ -59,5 +64,35 @@ contextBridge.exposeInMainWorld("api", {
     basename: (filePath) => ipcRenderer.invoke("path:basename", filePath),
     dirname: (filePath) => ipcRenderer.invoke("path:dirname", filePath),
     join: (...paths) => ipcRenderer.invoke("path:join", ...paths),
+  },
+
+  // 터미널 관련 (send/on 방식)
+  terminal: {
+    open: ({ serverId, type, containerName }) =>
+      ipcRenderer.send("terminal:open", { serverId, type, containerName }),
+    write: (sessionId, data) =>
+      ipcRenderer.send("terminal:write", { sessionId, data }),
+    resize: (sessionId, cols, rows) =>
+      ipcRenderer.send("terminal:resize", { sessionId, cols, rows }),
+    close: (sessionId) => ipcRenderer.send("terminal:close", { sessionId }),
+    list: () => ipcRenderer.invoke("terminal:list"),
+
+    // 이벤트 리스너
+    onOpened: (callback) => {
+      ipcRenderer.on("terminal:opened", (event, data) => callback(data));
+    },
+    onData: (callback) => {
+      ipcRenderer.on("terminal:data", (event, data) => callback(data));
+    },
+    onClosed: (callback) => {
+      ipcRenderer.on("terminal:closed", (event, data) => callback(data));
+    },
+
+    // 리스너 제거 (정리용)
+    removeAllListeners: () => {
+      ipcRenderer.removeAllListeners("terminal:opened");
+      ipcRenderer.removeAllListeners("terminal:data");
+      ipcRenderer.removeAllListeners("terminal:closed");
+    },
   },
 });
