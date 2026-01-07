@@ -85,10 +85,21 @@ function updateProgress(fileName, current, total) {
  * @param {number} failCount
  * @param {string} targetLabel - 추가 라벨 (예: ' 컨테이너로')
  */
-function completeTransfer(successCount, failCount, targetLabel = "") {
+async function completeTransfer(
+  successCount,
+  failCount,
+  targetLabel = "",
+  zipFilesToDelete = []
+) {
+  console.log("commcocmc???");
   transferPercent.textContent = "100%";
   progressFill.style.width = "100%";
   transferFilename.textContent = "완료";
+
+  // 임시 zip 파일 삭제
+  for (const zipPath of zipFilesToDelete) {
+    await window.api.file.deleteFile(zipPath);
+  }
 
   if (failCount === 0) {
     updateTransferResult(
@@ -315,25 +326,36 @@ export function initFileTransfer() {
  */
 async function addItemToQueue(itemPath) {
   // 폴더인지 확인
-  const result = await window.api.file.getFolderContents(itemPath);
+  const isDirectory = await window.api.file.isDirectory(itemPath);
 
-  if (result.success) {
-    // 폴더인 경우: 내부 파일들을 모두 추가
-    const folderName = result.folderName;
+  if (isDirectory) {
+    const folderName = await getFileName(itemPath);
 
-    if (result.files.length === 0) {
+    if (folderName.length === 0) {
       alert(`폴더 "${folderName}"에 파일이 없습니다.`);
       return;
     }
 
-    for (const file of result.files) {
-      addToQueue({
-        absolutePath: file.absolutePath,
-        relativePath: `${folderName}/${file.posixRelativePath}`,
-        displayName: `${folderName}/${file.posixRelativePath}`,
-        isFolder: false,
-      });
+    // showTransferProgress();
+    // updateProgress(`📦 ${folderName} 압축 중...`, 0, 1);
+
+    const result = await window.api.file.compressFolder(itemPath);
+
+    // 압축끝나면 숨기기
+    // transferStatus.classList.add("hidden");
+
+    if (!result.success) {
+      alert(`압축 실패: ${result.error}`);
+      return;
     }
+
+    addToQueue({
+      absolutePath: result.outputPath,
+      relativePath: `${folderName}.zip`,
+      displayName: `${folderName}.zip`,
+      isFolder: true,
+      needsUnzip: true,
+    });
   } else {
     // 파일인 경우
     const fileName = await getFileName(itemPath);
@@ -342,6 +364,7 @@ async function addItemToQueue(itemPath) {
       relativePath: fileName,
       displayName: fileName,
       isFolder: false,
+      neesUnzip: false,
     });
   }
 }
@@ -460,6 +483,7 @@ async function startTransfer(targetType, containerName = null) {
   // 2단계: 파일 전송
   let successCount = 0;
   let failCount = 0;
+  const zipFilesToDelete = [];
 
   for (let i = 0; i < fileQueue.length; i++) {
     const item = fileQueue[i];
@@ -468,10 +492,19 @@ async function startTransfer(targetType, containerName = null) {
 
     updateProgress(item.displayName, i, fileQueue.length);
 
+    // 압축이 필요한 폴더라면 삭제 목록에 추가
+    if (item.needsUnzip) {
+      zipFilesToDelete.push(item.absolutePath);
+    }
+
     // 전송 대상에 따라 API 분기
     const result =
       targetType === "host"
-        ? await window.api.ssh.sendFile(server.id, item.absolutePath, remoteFilePath)
+        ? await window.api.ssh.sendFile(
+            server.id,
+            item.absolutePath,
+            remoteFilePath
+          )
         : await window.api.docker.sendFile(
             server.id,
             item.absolutePath,
@@ -479,19 +512,44 @@ async function startTransfer(targetType, containerName = null) {
             remoteFilePath
           );
 
-    if (result.success) {
-      successCount++;
-    } else {
-      failCount++;
-      console.error(
-        `[${result.code}] 전송 실패: ${item.displayName} - ${result.error}`
+    let unzipResult;
+
+    // zip이면 압축해제
+    if (result.success && item.needsUnzip && targetType === "host") {
+      const targetDir = remoteFilePath.replace(/[^/]+\.zip$/, "");
+
+      unzipResult = await window.api.ssh.unzipFile(
+        server.id,
+        remoteFilePath,
+        targetDir
       );
+    }
+
+    // 결과 처리 분기
+    if (item.needsUnzip) {
+      // 폴더(zip)인 경우
+      if (unzipResult && unzipResult.success) {
+        successCount++;
+      } else {
+        failCount++;
+        console.error(
+          `압축 해제 실패: ${item.displayName} - ${unzipResult?.error}`
+        );
+      }
+    } else {
+      // 일반 파일인 경우
+      if (result.success) {
+        successCount++;
+      } else {
+        failCount++;
+        console.error(`전송 실패: ${item.displayName} - ${result.error}`);
+      }
     }
   }
 
   // 완료 처리
   const targetLabel = targetType === "host" ? "" : " 컨테이너로";
-  completeTransfer(successCount, failCount, targetLabel);
+  completeTransfer(successCount, failCount, targetLabel, zipFilesToDelete);
 }
 
 // ========================================

@@ -66,7 +66,56 @@ async function sendFile(server, localPath, remotePath) {
           });
           return;
         }
+
         resolve({ success: true });
+      });
+    });
+  });
+}
+
+async function unzipFile(server, remotePath, targetDir) {
+  return withConnection(server, async (conn) => {
+    return new Promise((resolve) => {
+      const command = `unzip -o "${remotePath}" -d "${targetDir}" && rm "${remotePath}"`;
+
+      console.log("unzip 명령 실행:", command);
+
+      conn.exec(command, (err, stream) => {
+        if (err) {
+          console.log("exec 에러:", err.message);
+          resolve({ success: false, error: err.message });
+          return;
+        }
+
+        let output = "";
+        let errorOutput = "";
+
+        stream.on("data", (data) => {
+          output += data.toString();
+          console.log("stdout:", data.toString());
+        });
+
+        stream.stderr.on("data", (data) => {
+          errorOutput += data.toString();
+          console.log("stderr:", data.toString());
+        });
+
+        stream.on("close", (code) => {
+          console.log("close 코드:", code);
+          if (code === 0) {
+            resolve({ success: true });
+          } else {
+            resolve({
+              success: false,
+              error: errorOutput || `Exit code: ${code}`,
+            });
+          }
+        });
+
+        stream.on("error", (err) => {
+          console.log("stream 에러:", err.message);
+          resolve({ success: false, error: err.message });
+        });
       });
     });
   });
@@ -76,4 +125,5 @@ module.exports = {
   testConnection,
   makeDirectory,
   sendFile,
+  unzipFile,
 };

@@ -7,6 +7,7 @@ const terminalSession = require("./shared/terminalSession");
 const { ERROR_CODES } = require("./shared/errorCodes");
 const logger = require("./shared/logger");
 const fileUtils = require("./shared/fileUtils");
+const compressUtils = require("./shared/compressUtils");
 
 let mainWindow;
 
@@ -22,7 +23,7 @@ function createWindow() {
   });
 
   mainWindow.loadFile("index.html");
-  // mainWindow.webContents.openDevTools();
+  mainWindow.webContents.openDevTools();
 
   logger.info("App", "메인 윈도우 생성 완료");
 }
@@ -67,9 +68,26 @@ ipcMain.handle("path:join", (event, ...paths) => {
 });
 
 // 폴더 내 파일 목록 조회
-ipcMain.handle("file:getFolderContents", (event, folderPath) => {
-  logger.debug("IPC", "file:getFolderContents 호출", { folderPath });
-  return fileUtils.getFolderContents(folderPath);
+ipcMain.handle("file:isDirectory", (event, folderPath) => {
+  logger.debug("IPC", "file:isDirectory 호출", { folderPath });
+  return fileUtils.isDirectory(folderPath);
+});
+
+// 폴더 압축
+ipcMain.handle("file:compressFolder", (event, folderPath) => {
+  logger.debug("IPC", "file:compressFolder 호출", { folderPath });
+  return compressUtils.compressFolder(folderPath);
+});
+
+// 파일 삭제
+ipcMain.handle("file:deleteFile", (event, filePath) => {
+  const fs = require("fs");
+  try {
+    fs.unlinkSync(filePath);
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
 });
 
 // 서버 목록 조회
@@ -224,12 +242,48 @@ ipcMain.handle(
       localPath,
       remotePath,
     });
+
     const result = await sshClient.sendFile(server, localPath, remotePath);
 
     if (result.success) {
       logger.info("SSH", "파일 전송 성공", { remotePath });
     } else {
       logger.error("SSH", "파일 전송 실패", {
+        remotePath,
+        error: result.error,
+      });
+    }
+
+    return result;
+  }
+);
+
+ipcMain.handle(
+  "ssh:unzipFile",
+  async (event, serverId, remotePath, targetDir) => {
+    const server = serverRepository.findById(serverId);
+
+    if (!server) {
+      logger.warn("SSH", "서버를 찾을 수 없음", { serverId });
+      return {
+        success: false,
+        error: "서버를 찾을 수 없습니다",
+        code: ERROR_CODES.NOT_FOUND,
+      };
+    }
+
+    logger.info("SSH", "파일 압축풀기 시작", {
+      host: server.host,
+      remotePath,
+      targetDir,
+    });
+
+    const result = await sshClient.unzipFile(server, remotePath, targetDir);
+
+    if (result.success) {
+      logger.info("SSH", "파일 압축풀기 성공", { remotePath });
+    } else {
+      logger.error("SSH", "파일 압축풀기 실패", {
         remotePath,
         error: result.error,
       });

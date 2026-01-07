@@ -22,8 +22,11 @@ contextBridge.exposeInMainWorld("api", {
 
   // 파일 유틸리티
   file: {
-    getFolderContents: (folderPath) =>
-      ipcRenderer.invoke("file:getFolderContents", folderPath),
+    isDirectory: (folderPath) =>
+      ipcRenderer.invoke("file:isDirectory", folderPath),
+    compressFolder: (folderPath) =>
+      ipcRenderer.invoke("file:compressFolder", folderPath),
+    deleteFile: (filePath) => ipcRenderer.invoke("file:deleteFile", filePath),
   },
 
   // SSH 연결 관련
@@ -34,6 +37,8 @@ contextBridge.exposeInMainWorld("api", {
       ipcRenderer.invoke("ssh:makeDirectory", serverId, remoteDirPath),
     sendFile: (serverId, localPath, remotePath) =>
       ipcRenderer.invoke("ssh:sendFile", serverId, localPath, remotePath),
+    unzipFile: (serverId, remotePath, targetDir) =>
+      ipcRenderer.invoke("ssh:unzipFile", serverId, remotePath, targetDir),
   },
 
   // Docker 관련
