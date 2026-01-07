@@ -22,7 +22,7 @@ function createWindow() {
   });
 
   mainWindow.loadFile("index.html");
-  mainWindow.webContents.openDevTools();
+  // mainWindow.webContents.openDevTools();
 
   logger.info("App", "메인 윈도우 생성 완료");
 }
