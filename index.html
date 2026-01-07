@@ -53,33 +53,13 @@
             <p><strong>Key File:</strong> <span id="detail-keyfile">-</span></p>
           </div>
 
-          <!-- 연결 대상 선택 & 테스트 -->
-          <div class="connection-section">
-            <div class="connection-target">
-              <label for="connection-target">연결 대상:</label>
-              <select id="connection-target">
-                <option value="host">🖥️ 호스트</option>
-                <!-- 컨테이너 목록은 JS로 동적 추가 -->
-              </select>
-              <button
-                id="btn-refresh-containers"
-                class="btn-icon"
-                title="컨테이너 목록 새로고침"
-              >
-                🔄컨테이너 불러오기
-              </button>
-              <button id="btn-test-connection" class="btn-primary">
-                🪢 연결 테스트
-              </button>
-            </div>
-            <div id="connection-status" class="connection-status"></div>
-          </div>
-
           <hr />
 
           <!-- 메인 탭 -->
           <div class="main-tabs">
-            <button id="tab-file-transfer" class="main-tab active">📁 파일 전송</button>
+            <button id="tab-file-transfer" class="main-tab active">
+              📁 파일 전송
+            </button>
             <button id="tab-terminal" class="main-tab">💻 터미널</button>
           </div>
 
@@ -87,13 +67,34 @@
           <div id="file-transfer-section" class="file-transfer-section">
             <h3>📁 파일 전송</h3>
 
+            <!-- 연결 대상 선택 & 테스트 -->
+            <div class="connection-section">
+              <div class="connection-target">
+                <label for="connection-target">연결 대상:</label>
+                <select id="connection-target">
+                  <option value="host">🖥️ 호스트</option>
+                  <!-- 컨테이너 목록은 JS로 동적 추가 -->
+                </select>
+                <button
+                  id="btn-refresh-containers"
+                  class="btn-icon"
+                  title="컨테이너 목록 새로고침"
+                >
+                  🔄컨테이너 불러오기
+                </button>
+                <button id="btn-test-connection" class="btn-primary">
+                  🪢 연결 테스트
+                </button>
+              </div>
+              <div id="connection-status" class="connection-status"></div>
+            </div>
+
             <!-- 원격 경로 입력 -->
             <div class="remote-path-section">
               <label for="remote-path"
-                >원격 경로 <br />
-                1. 원격 서버에 존재하는 폴더 경로여야 합니다.<br />
-                2. Username의 사용자가 해당 폴f더 수정 권한이 있어야 합니다.
-              </label>
+                >원격 경로 💡원격 서버에 존재하는 폴더 경로를 입력하세요. 해당
+                사용자에게 수정 권한이 필요합니다.</label
+              >
               <div class="remote-path-input-group">
                 <input
                   type="text"
@@ -167,10 +168,15 @@
             <div id="terminal-container" class="terminal-container">
               <!-- 터미널 탭 -->
               <div id="terminal-tabs" class="terminal-tabs">
-                <button id="btn-new-terminal" class="btn-new-terminal">+ ▼</button>
+                <button id="btn-new-terminal" class="btn-new-terminal">
+                  + ▼
+                </button>
               </div>
               <!-- 드롭다운 메뉴 -->
-              <div id="new-terminal-dropdown" class="new-terminal-dropdown hidden">
+              <div
+                id="new-terminal-dropdown"
+                class="new-terminal-dropdown hidden"
+              >
                 <!-- JS로 동적 추가 -->
               </div>
               <!-- 터미널 내용 -->
@@ -180,7 +186,10 @@
                 </div>
               </div>
               <!-- 리사이즈 핸들 -->
-              <div id="terminal-resize-handle" class="terminal-resize-handle"></div>
+              <div
+                id="terminal-resize-handle"
+                class="terminal-resize-handle"
+              ></div>
             </div>
           </div>
         </div>

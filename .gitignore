@@ -1,2 +1,12 @@
 node_modules/
 docs/
+
+# 빌드 결과물
+dist/
+
+# electron-builder 캐시
+.electron-builder-cache/
+
+# 기타 일반적인 것들
+node_modules/
+*.log

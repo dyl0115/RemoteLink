@@ -15,12 +15,12 @@ const terminals = new Map();
 let activeSessionId = null;
 
 // DOM 요소
-let terminalTabs;
-let terminalContainer;
-let terminalContent;
-let resizeHandle;
-let btnNewTerminal;
-let newTerminalDropdown;
+const terminalTabs = document.getElementById("terminal-tabs");
+const terminalContainer = document.getElementById("terminal-container");
+const terminalContent = document.getElementById("terminal-content");
+const resizeHandle = document.getElementById("terminal-resize-handle");
+const btnNewTerminal = document.getElementById("btn-new-terminal");
+const newTerminalDropdown = document.getElementById("new-terminal-dropdown");
 
 // 리사이즈 상태
 let isResizing = false;
@@ -34,13 +34,6 @@ const DEFAULT_HEIGHT = 300;
  * 터미널 뷰 초기화
  */
 export function initTerminalView() {
-  terminalTabs = document.getElementById("terminal-tabs");
-  terminalContainer = document.getElementById("terminal-container");
-  terminalContent = document.getElementById("terminal-content");
-  resizeHandle = document.getElementById("terminal-resize-handle");
-  btnNewTerminal = document.getElementById("btn-new-terminal");
-  newTerminalDropdown = document.getElementById("new-terminal-dropdown");
-
   // 새 터미널 버튼 이벤트
   btnNewTerminal.addEventListener("click", toggleDropdown);
 
@@ -142,8 +135,6 @@ export function openTerminal(type = "host", containerName = null) {
  * 터미널 세션 열림 핸들러
  */
 function handleTerminalOpened(result) {
-  console.log("handleTerminalOpened:", result);
-
   if (!result.success) {
     console.error("터미널 열기 실패:", result.error);
     alert(`터미널 열기 실패: ${result.error}`);
@@ -164,8 +155,6 @@ function handleTerminalOpened(result) {
  * 터미널 탭 생성
  */
 function createTerminalTab(sessionId, type, name) {
-  console.log("createTerminalTab 호출:", { sessionId, type, name });
-
   // placeholder 숨기기
   const placeholder = terminalContent.querySelector(".terminal-placeholder");
   if (placeholder) {

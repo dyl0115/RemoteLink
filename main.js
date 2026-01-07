@@ -38,10 +38,10 @@ app.whenReady().then(() => {
 
 app.on("window-all-closed", () => {
   logger.info("App", "모든 윈도우 닫힘");
-  
+
   // 모든 터미널 세션 종료
   terminalSession.closeAll();
-  
+
   logger.close();
 
   if (process.platform !== "darwin") {
@@ -103,10 +103,16 @@ ipcMain.handle("server:saveRemotePath", async (event, serverId, remotePath) => {
 });
 
 // 원격 경로 삭제
-ipcMain.handle("server:deleteRemotePath", async (event, serverId, remotePath) => {
-  logger.info("IPC", "server:deleteRemotePath 호출", { serverId, remotePath });
-  return serverRepository.removeRemotePath(serverId, remotePath);
-});
+ipcMain.handle(
+  "server:deleteRemotePath",
+  async (event, serverId, remotePath) => {
+    logger.info("IPC", "server:deleteRemotePath 호출", {
+      serverId,
+      remotePath,
+    });
+    return serverRepository.removeRemotePath(serverId, remotePath);
+  }
+);
 
 // 키 파일 선택 다이얼로그
 ipcMain.handle("dialog:selectKeyFile", async () => {
@@ -172,7 +178,10 @@ ipcMain.handle("ssh:testConnection", async (event, serverId) => {
   if (result.success) {
     logger.info("SSH", "연결 테스트 성공", { host: server.host });
   } else {
-    logger.error("SSH", "연결 테스트 실패", { host: server.host, error: result.error });
+    logger.error("SSH", "연결 테스트 실패", {
+      host: server.host,
+      error: result.error,
+    });
   }
 
   return result;
@@ -196,29 +205,39 @@ ipcMain.handle("ssh:makeDirectory", async (event, serverId, remoteDirPath) => {
 });
 
 // 호스트에게 파일 전송
-ipcMain.handle("ssh:sendFile", async (event, serverId, localPath, remotePath) => {
-  const server = serverRepository.findById(serverId);
+ipcMain.handle(
+  "ssh:sendFile",
+  async (event, serverId, localPath, remotePath) => {
+    const server = serverRepository.findById(serverId);
 
-  if (!server) {
-    logger.warn("SSH", "서버를 찾을 수 없음", { serverId });
-    return {
-      success: false,
-      error: "서버를 찾을 수 없습니다",
-      code: ERROR_CODES.NOT_FOUND,
-    };
+    if (!server) {
+      logger.warn("SSH", "서버를 찾을 수 없음", { serverId });
+      return {
+        success: false,
+        error: "서버를 찾을 수 없습니다",
+        code: ERROR_CODES.NOT_FOUND,
+      };
+    }
+
+    logger.info("SSH", "파일 전송 시작", {
+      host: server.host,
+      localPath,
+      remotePath,
+    });
+    const result = await sshClient.sendFile(server, localPath, remotePath);
+
+    if (result.success) {
+      logger.info("SSH", "파일 전송 성공", { remotePath });
+    } else {
+      logger.error("SSH", "파일 전송 실패", {
+        remotePath,
+        error: result.error,
+      });
+    }
+
+    return result;
   }
-
-  logger.info("SSH", "파일 전송 시작", { host: server.host, localPath, remotePath });
-  const result = await sshClient.sendFile(server, localPath, remotePath);
-
-  if (result.success) {
-    logger.info("SSH", "파일 전송 성공", { remotePath });
-  } else {
-    logger.error("SSH", "파일 전송 실패", { remotePath, error: result.error });
-  }
-
-  return result;
-});
+);
 
 // 호스트의 도커 컨테이너 조회
 ipcMain.handle("docker:listContainer", async (event, serverId) => {
@@ -237,7 +256,9 @@ ipcMain.handle("docker:listContainer", async (event, serverId) => {
   const result = await dockerClient.getContainers(server);
 
   if (result.success) {
-    logger.info("Docker", "컨테이너 목록 조회 성공", { count: result.containers.length });
+    logger.info("Docker", "컨테이너 목록 조회 성공", {
+      count: result.containers.length,
+    });
   } else {
     logger.error("Docker", "컨테이너 목록 조회 실패", { error: result.error });
   }
@@ -246,29 +267,38 @@ ipcMain.handle("docker:listContainer", async (event, serverId) => {
 });
 
 // 도커 컨테이너 연결 테스트
-ipcMain.handle("docker:testContainer", async (event, serverId, containerName) => {
-  const server = serverRepository.findById(serverId);
+ipcMain.handle(
+  "docker:testContainer",
+  async (event, serverId, containerName) => {
+    const server = serverRepository.findById(serverId);
 
-  if (!server) {
-    logger.warn("Docker", "서버를 찾을 수 없음", { serverId });
-    return {
-      success: false,
-      error: "서버를 찾을 수 없습니다",
-      code: ERROR_CODES.NOT_FOUND,
-    };
+    if (!server) {
+      logger.warn("Docker", "서버를 찾을 수 없음", { serverId });
+      return {
+        success: false,
+        error: "서버를 찾을 수 없습니다",
+        code: ERROR_CODES.NOT_FOUND,
+      };
+    }
+
+    logger.info("Docker", "컨테이너 연결 테스트", {
+      host: server.host,
+      containerName,
+    });
+    const result = await dockerClient.testContainer(server, containerName);
+
+    if (result.success) {
+      logger.info("Docker", "컨테이너 연결 테스트 성공", { containerName });
+    } else {
+      logger.error("Docker", "컨테이너 연결 테스트 실패", {
+        containerName,
+        error: result.error,
+      });
+    }
+
+    return result;
   }
-
-  logger.info("Docker", "컨테이너 연결 테스트", { host: server.host, containerName });
-  const result = await dockerClient.testContainer(server, containerName);
-
-  if (result.success) {
-    logger.info("Docker", "컨테이너 연결 테스트 성공", { containerName });
-  } else {
-    logger.error("Docker", "컨테이너 연결 테스트 실패", { containerName, error: result.error });
-  }
-
-  return result;
-});
+);
 
 // 컨테이너 내 디렉토리 생성
 ipcMain.handle(
@@ -285,8 +315,15 @@ ipcMain.handle(
       };
     }
 
-    logger.debug("Docker", "컨테이너 내 디렉토리 생성", { containerName, dirPath });
-    return dockerClient.makeDirectoryInContainer(server, containerName, dirPath);
+    logger.debug("Docker", "컨테이너 내 디렉토리 생성", {
+      containerName,
+      dirPath,
+    });
+    return dockerClient.makeDirectoryInContainer(
+      server,
+      containerName,
+      dirPath
+    );
   }
 );
 
@@ -320,9 +357,15 @@ ipcMain.handle(
     );
 
     if (result.success) {
-      logger.info("Docker", "컨테이너 파일 전송 성공", { containerName, containerPath });
+      logger.info("Docker", "컨테이너 파일 전송 성공", {
+        containerName,
+        containerPath,
+      });
     } else {
-      logger.error("Docker", "컨테이너 파일 전송 실패", { containerName, error: result.error });
+      logger.error("Docker", "컨테이너 파일 전송 실패", {
+        containerName,
+        error: result.error,
+      });
     }
 
     return result;
@@ -334,63 +377,84 @@ ipcMain.handle(
 // ========================================
 
 // 터미널 세션 열기
-ipcMain.on("terminal:open", async (event, { serverId, type, containerName }) => {
-  const server = serverRepository.findById(serverId);
+ipcMain.on(
+  "terminal:open",
+  async (event, { serverId, type, containerName }) => {
+    const server = serverRepository.findById(serverId);
 
-  if (!server) {
-    logger.warn("Terminal", "서버를 찾을 수 없음", { serverId });
-    event.reply("terminal:opened", {
-      success: false,
-      error: "서버를 찾을 수 없습니다",
-      code: ERROR_CODES.NOT_FOUND,
+    if (!server) {
+      logger.warn("Terminal", "서버를 찾을 수 없음", { serverId });
+      event.reply("terminal:opened", {
+        success: false,
+        error: "서버를 찾을 수 없습니다",
+        code: ERROR_CODES.NOT_FOUND,
+      });
+      return;
+    }
+
+    const targetName = type === "host" ? "호스트" : containerName;
+    logger.info("Terminal", `터미널 세션 열기: ${targetName}`, {
+      serverId,
+      type,
     });
-    return;
+
+    // 데이터 수신 콜백
+    const onData = (data) => {
+      event.reply("terminal:data", { sessionId: result.sessionId, data });
+    };
+
+    // 세션 종료 콜백
+    const onClose = (reason) => {
+      event.reply("terminal:closed", { sessionId: result.sessionId, reason });
+    };
+
+    let result;
+    if (type === "host") {
+      result = await terminalSession.createHostSession(server, onData, onClose);
+    } else {
+      result = await terminalSession.createContainerSession(
+        server,
+        containerName,
+        onData,
+        onClose
+      );
+    }
+
+    if (result.success) {
+      logger.info("Terminal", `터미널 세션 생성 완료`, {
+        sessionId: result.sessionId,
+      });
+    } else {
+      logger.error("Terminal", `터미널 세션 생성 실패`, {
+        error: result.error,
+      });
+    }
+
+    event.reply("terminal:opened", result);
   }
-
-  const targetName = type === "host" ? "호스트" : containerName;
-  logger.info("Terminal", `터미널 세션 열기: ${targetName}`, { serverId, type });
-
-  // 데이터 수신 콜백
-  const onData = (data) => {
-    event.reply("terminal:data", { sessionId: result.sessionId, data });
-  };
-
-  // 세션 종료 콜백
-  const onClose = (reason) => {
-    event.reply("terminal:closed", { sessionId: result.sessionId, reason });
-  };
-
-  let result;
-  if (type === "host") {
-    result = await terminalSession.createHostSession(server, onData, onClose);
-  } else {
-    result = await terminalSession.createContainerSession(server, containerName, onData, onClose);
-  }
-
-  if (result.success) {
-    logger.info("Terminal", `터미널 세션 생성 완료`, { sessionId: result.sessionId });
-  } else {
-    logger.error("Terminal", `터미널 세션 생성 실패`, { error: result.error });
-  }
-
-  event.reply("terminal:opened", result);
-});
+);
 
 // 터미널 데이터 쓰기 (키 입력)
 ipcMain.on("terminal:write", (event, { sessionId, data }) => {
   const result = terminalSession.write(sessionId, data);
-  
+
   if (!result.success) {
-    logger.warn("Terminal", `데이터 쓰기 실패`, { sessionId, error: result.error });
+    logger.warn("Terminal", `데이터 쓰기 실패`, {
+      sessionId,
+      error: result.error,
+    });
   }
 });
 
 // 터미널 크기 변경
 ipcMain.on("terminal:resize", (event, { sessionId, cols, rows }) => {
   const result = terminalSession.resize(sessionId, cols, rows);
-  
+
   if (!result.success) {
-    logger.warn("Terminal", `크기 변경 실패`, { sessionId, error: result.error });
+    logger.warn("Terminal", `크기 변경 실패`, {
+      sessionId,
+      error: result.error,
+    });
   }
 });
 
@@ -398,9 +462,12 @@ ipcMain.on("terminal:resize", (event, { sessionId, cols, rows }) => {
 ipcMain.on("terminal:close", (event, { sessionId }) => {
   logger.info("Terminal", `터미널 세션 닫기 요청`, { sessionId });
   const result = terminalSession.close(sessionId);
-  
+
   if (!result.success) {
-    logger.warn("Terminal", `세션 닫기 실패`, { sessionId, error: result.error });
+    logger.warn("Terminal", `세션 닫기 실패`, {
+      sessionId,
+      error: result.error,
+    });
   }
 });
 
