@@ -23,7 +23,7 @@ function createWindow() {
   });
 
   mainWindow.loadFile("index.html");
-  mainWindow.webContents.openDevTools();
+  // mainWindow.webContents.openDevTools();
 
   logger.info("App", "메인 윈도우 생성 완료");
 }
@@ -426,6 +426,49 @@ ipcMain.handle(
   }
 );
 
+ipcMain.handle(
+  "docker:unzipFile",
+  async (event, serverId, containerName, containerPath, targetDir) => {
+    const server = serverRepository.findById(serverId);
+
+    if (!server) {
+      logger.warn("Docker", "서버를 찾을 수 없음", { serverId });
+      return {
+        success: false,
+        error: "서버를 찾을 수 없습니다",
+        code: ERROR_CODES.NOT_FOUND,
+      };
+    }
+
+    logger.info("Docker", "컨테이너 파일 압축해제 시작", {
+      host: server.host,
+      containerName,
+      containerPath,
+      targetDir,
+    });
+
+    const result = await dockerClient.unzipFile(
+      server,
+      containerName,
+      containerPath,
+      targetDir
+    );
+
+    if (result.success) {
+      logger.info("Docker", "컨테이너 파일 압축해제 성공", {
+        containerName,
+        containerPath,
+      });
+    } else {
+      logger.error("Docker", "컨테이너 파일 압축해제 실패", {
+        containerName,
+        error: result.error,
+      });
+    }
+
+    return result;
+  }
+);
 // ========================================
 // 터미널 IPC 핸들러
 // ========================================

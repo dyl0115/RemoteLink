@@ -159,9 +159,48 @@ async function sendFile(server, localPath, containerName, containerPath) {
   });
 }
 
+// 로컬 -> 호스트의 도커 컨테이너 내부 파일 압축해제 + 삭제
+async function unzipFile(server, containerName, containerPath, targetDir) {
+  return withConnection(server, async (conn) => {
+    // 1단계: unzip 실행 (-o: 덮어쓰기, -q: 조용히)
+    const unzipCmd = `docker exec ${containerName} unzip -o -q ${containerPath} -d ${targetDir}`;
+    const unzipResult = await execCommand(conn, unzipCmd);
+    // console.log("cmd 어떻게 나감??? " + unzipCmd);
+
+    if (!unzipResult.success) {
+      // unzip 실패 시 임시 파일은 남겨둘지 삭제할지 선택
+      // 디버깅을 위해 남겨두거나, 아래처럼 삭제
+      await execCommand(
+        conn,
+        `docker exec ${containerName} rm -f ${containerPath}`
+      ).catch(() => {});
+
+      return {
+        success: false,
+        error: `압축 해제 실패: ${unzipResult.error || unzipResult.stderr}`,
+        code: ERROR_CODES.DOCKER_COMMAND_FAILED,
+      };
+    }
+
+    // 2단계: 성공 시 임시 zip 파일 삭제
+    const removeResult = await execCommand(
+      conn,
+      `docker exec ${containerName} rm -f ${containerPath}`
+    );
+
+    if (!removeResult.success) {
+      // 삭제 실패는 경고만 (압축 해제는 성공했으므로)
+      console.warn(`임시 파일 삭제 실패: ${containerPath}`);
+    }
+
+    return { success: true };
+  });
+}
+
 module.exports = {
   getContainers,
   testContainer,
   makeDirectoryInContainer,
   sendFile,
+  unzipFile,
 };

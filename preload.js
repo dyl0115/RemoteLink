@@ -62,6 +62,14 @@ contextBridge.exposeInMainWorld("api", {
         containerName,
         containerPath
       ),
+    unzipFile: (serverId, containerName, containerPath, targetDir) =>
+      ipcRenderer.invoke(
+        "docker:unzipFile",
+        serverId,
+        containerName,
+        containerPath,
+        targetDir
+      ),
   },
 
   // 경로 유틸리티 (크로스 플랫폼) - Main 프로세스에서 처리

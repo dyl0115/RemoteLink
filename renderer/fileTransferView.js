@@ -515,14 +515,23 @@ async function startTransfer(targetType, containerName = null) {
     let unzipResult;
 
     // zip이면 압축해제
-    if (result.success && item.needsUnzip && targetType === "host") {
+    if (result.success && item.needsUnzip) {
       const targetDir = remoteFilePath.replace(/[^/]+\.zip$/, "");
 
-      unzipResult = await window.api.ssh.unzipFile(
-        server.id,
-        remoteFilePath,
-        targetDir
-      );
+      if (targetType === "host") {
+        unzipResult = await window.api.ssh.unzipFile(
+          server.id,
+          remoteFilePath,
+          targetDir
+        );
+      } else {
+        unzipResult = await window.api.docker.unzipFile(
+          server.id,
+          containerName,
+          remoteFilePath,
+          targetDir
+        );
+      }
     }
 
     // 결과 처리 분기
